@@ -127,6 +127,7 @@ func createBatchedTable(db *sql.DB) {
 func batchAndInsertEmployees(db *sql.DB, employees []Employee, batchSize int) {
 	createBatchedTable(db)
 
+	// Loop through employees in steps of batchSize to process each batch
 	for i := 0; i < len(employees); i += batchSize {
 		// Determine the slice range for this batch
 		end := i + batchSize
