@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  hello:
+    build: .
+    stdin_open: true
+    tty: true
+    depends_on:
+      - mariadb
+
+  mariadb:
+    image: mariadb:10.11
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: company
+    ports:
+      - "3306:3306"
