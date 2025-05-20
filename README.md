@@ -1,4 +1,4 @@
-# Hello Docker with MariaDB (Golang CLI App with Batching)
+# Grouping Employees in MariaDB (Golang App with Batching)
 
 This project is a simple but extensible Go application that:
 
@@ -32,7 +32,7 @@ This project is a simple but extensible Go application that:
    ```bash
    docker-compose down -v   # Stops and removes volumes
    docker-compose build
-   docker-compose run hello
+   docker-compose run batch
 
    docker-compose down     # Clean up
    ```
@@ -47,19 +47,21 @@ This project is a simple but extensible Go application that:
 4. Group into Batches of 3
 
    The 10 employee records are split into batches of 3 like so:
-      
-      •	Batch 1 → Records 1–3
-      
-      •	Batch 2 → Records 4–6
-      
-      •	Batch 3 → Records 7–9
-      
-      •	Batch 4 → Record 10 (last one)
+
+   • Batch 1 → Records 1–3
+
+   • Batch 2 → Records 4–6
+
+   • Batch 3 → Records 7–9
+
+   • Batch 4 → Record 10 (last one)
 
    Each batch is inserted into employee_batched with a name like alice_batch_1.
+
    ```json
-      [
-         {"project": "Project-1", "level": "Senior", "batch": 1},
-         {"project": "Project-2", "level": "Senior", "batch": 2},
-         {"project": "Project-3", "level": "Senior", "batch": 3}
-      ]
+   [
+     { "project": "Project-1", "level": "Senior", "batch": 1 },
+     { "project": "Project-2", "level": "Senior", "batch": 2 },
+     { "project": "Project-3", "level": "Senior", "batch": 3 }
+   ]
+   ```

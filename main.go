@@ -146,15 +146,28 @@ func batchAndInsertEmployees(db *sql.DB, employees []Employee, batchSize int) {
 		batchName := fmt.Sprintf("alice_batch_%d", (i/batchSize)+1)
 
 		// Marshal the batch metadata slice into JSON
-		metaJSON, _ := json.Marshal(metaBatch)
+		metaJSON, err := json.Marshal(metaBatch)
+		if err != nil {
+			log.Fatalf("Failed to marshal metaBatch: %v", err)
+		}
 
 		// Insert the batch record into the employee_batched table
-		_, err := db.Exec(
+		tx, err := db.Begin()
+		if err != nil {
+			log.Fatalf("Failed to begin transaction: %v", err)
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec(
 			`INSERT INTO employee_batched (employee_name, employee_department, employee_meta) VALUES (?, ?, ?)`,
 			batchName, "Engineering", metaJSON,
 		)
 		if err != nil {
 			log.Fatalf("Insert into employee_batched failed: %v", err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			log.Fatalf("Failed to commit transaction: %v", err)
 		}
 		fmt.Printf("Inserted batch: %s\n", batchName)
 	}
