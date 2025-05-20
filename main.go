@@ -85,8 +85,31 @@ func main() {
 
 	// Create and insert into batched table
 	batchAndInsertEmployees(db, allEmployees, 3)
+
+	// Read and print all batched records
+	rows2, err := db.Query("SELECT employee_name, employee_department, employee_meta FROM employee_batched ORDER BY employee_name ASC")
+	if err != nil {
+		log.Fatalf("Query for batched table failed: %v", err)
+	}
+	defer rows2.Close()
+
+	fmt.Println("\nBatched Records:")
+	for rows2.Next() {
+		var name, dept, metaStr string
+		if err := rows2.Scan(&name, &dept, &metaStr); err != nil {
+			log.Fatal(err)
+		}
+		var metaArray []map[string]interface{}
+		json.Unmarshal([]byte(metaStr), &metaArray)
+
+		fmt.Printf("Batch: %s, Department: %s\n", name, dept)
+		for i, meta := range metaArray {
+			fmt.Printf("  Record %d: %+v\n", i+1, meta)
+		}
+	}
 }
 
+// Creates the table `employee_batched` if it doesn't exist
 func createBatchedTable(db *sql.DB) {
 	createTable := `
 	CREATE TABLE IF NOT EXISTS employee_batched (
@@ -99,23 +122,32 @@ func createBatchedTable(db *sql.DB) {
 	}
 }
 
+// batchAndInsertEmployees groups employees into fixed-size batches
+// and inserts each group as one row in the `employee_batched` table
 func batchAndInsertEmployees(db *sql.DB, employees []Employee, batchSize int) {
 	createBatchedTable(db)
 
 	for i := 0; i < len(employees); i += batchSize {
+		// Determine the slice range for this batch
 		end := i + batchSize
 		if end > len(employees) {
 			end = len(employees)
 		}
 		batch := employees[i:end]
+
+		// Collect the employee_meta fields into a slice
 		metaBatch := []map[string]interface{}{}
 		for _, e := range batch {
 			metaBatch = append(metaBatch, e.Meta)
 		}
 
+		// Use batch number in the employee_name as a unique key
 		batchName := fmt.Sprintf("alice_batch_%d", (i/batchSize)+1)
+
+		// Marshal the batch metadata slice into JSON
 		metaJSON, _ := json.Marshal(metaBatch)
 
+		// Insert the batch record into the employee_batched table
 		_, err := db.Exec(
 			`INSERT INTO employee_batched (employee_name, employee_department, employee_meta) VALUES (?, ?, ?)`,
 			batchName, "Engineering", metaJSON,
