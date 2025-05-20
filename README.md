@@ -31,7 +31,13 @@ The program inserts a sample employee into the database and then reads back all 
    ```
 
 2. Build and run the container:
+
    ```bash
    docker-compose build
    docker-compose run hello
    ```
+
+3. Database Screenshots
+   ![alt text](employee_table.png)
+
+   ![alt text](employee_batched.png)
