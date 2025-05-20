@@ -123,41 +123,51 @@ func createBatchedTable(db *sql.DB) {
 }
 
 // batchAndInsertEmployees groups employees into fixed-size batches
-// and inserts each group as one row in the `employee_batched` table
+// and inserts each group as one row in the `employee_batched` table.
+// Each batch is assigned a unique batch name and all employee metadata
+// in the batch is stored as a JSON array in the employee_meta column.
+// Assumes all employees are from the same department ("Engineering").
+//
+// Parameters:
+//   db        - database connection
+//   employees - slice of Employee structs to batch and insert
+//   batchSize - number of employees per batch
 func batchAndInsertEmployees(db *sql.DB, employees []Employee, batchSize int) {
+	// Ensure the batched table exists before inserting
 	createBatchedTable(db)
 
 	// Loop through employees in steps of batchSize to process each batch
 	for i := 0; i < len(employees); i += batchSize {
-		// Determine the slice range for this batch
+		// Calculate the end index for the current batch
 		end := i + batchSize
 		if end > len(employees) {
-			end = len(employees)
+			end = len(employees) // Handle the last batch if it's smaller than batchSize
 		}
-		batch := employees[i:end]
+		batch := employees[i:end] // Slice for the current batch
 
-		// Collect the employee_meta fields into a slice
+		// Collect the employee_meta fields from each employee in the batch
 		metaBatch := []map[string]interface{}{}
 		for _, e := range batch {
 			metaBatch = append(metaBatch, e.Meta)
 		}
 
-		// Use batch number in the employee_name as a unique key
+		// Generate a unique batch name using the batch number
 		batchName := fmt.Sprintf("alice_batch_%d", (i/batchSize)+1)
 
-		// Marshal the batch metadata slice into JSON
+		// Convert the batch's metadata slice to JSON for storage
 		metaJSON, err := json.Marshal(metaBatch)
 		if err != nil {
 			log.Fatalf("Failed to marshal metaBatch: %v", err)
 		}
 
-		// Insert the batch record into the employee_batched table
+		// Start a new transaction for the batch insert
 		tx, err := db.Begin()
 		if err != nil {
 			log.Fatalf("Failed to begin transaction: %v", err)
 		}
-		defer tx.Rollback()
+		defer tx.Rollback() // Ensures rollback if commit is not reached
 
+		// Insert the batch record into the employee_batched table
 		_, err = tx.Exec(
 			`INSERT INTO employee_batched (employee_name, employee_department, employee_meta) VALUES (?, ?, ?)`,
 			batchName, "Engineering", metaJSON,
@@ -166,6 +176,7 @@ func batchAndInsertEmployees(db *sql.DB, employees []Employee, batchSize int) {
 			log.Fatalf("Insert into employee_batched failed: %v", err)
 		}
 
+		// Commit the transaction to save the batch
 		if err := tx.Commit(); err != nil {
 			log.Fatalf("Failed to commit transaction: %v", err)
 		}
